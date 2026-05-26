@@ -1,0 +1,324 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.header { background: #1a3c5e; color: #fff; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.market-bar { background: var(--color-background-secondary); border-bottom: 0.5px solid var(--color-border-tertiary); padding: 10px 16px; display: flex; align-items: center; gap: 8px; }
+.controls { padding: 8px 16px; display: flex; gap: 6px; align-items: center; }
+.sample-btn { font-size: 11px; padding: 5px 10px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-tertiary); background: var(--color-background-secondary); color: var(--color-text-secondary); cursor: pointer; }
+.sample-btn.active { background: #1a3c5e; color: #fff; border-color: #1a3c5e; }
+.digits-grid { padding: 10px 16px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.digit-cell { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.digit-circle { width: 54px; height: 54px; border-radius: 50%; border: 2.5px solid var(--color-border-tertiary); display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--color-background-primary); }
+.digit-circle.hot { border-color: #16a34a; background: #f0fdf4; }
+.digit-circle.cold { border-color: #dc2626; background: #fff5f5; }
+.digit-circle.active-digit { border-width: 3px; border-color: #1a3c5e; }
+.digit-num { font-size: 16px; font-weight: 500; color: var(--color-text-primary); line-height: 1; }
+.digit-pct { font-size: 11px; line-height: 1; }
+.digit-bar { width: 38px; height: 3px; border-radius: 2px; background: var(--color-border-tertiary); overflow: hidden; }
+.digit-bar-fill { height: 100%; border-radius: 2px; background: #1a3c5e; transition: width 0.4s; }
+.digit-bar-fill.hot { background: #16a34a; }
+.digit-bar-fill.cold { background: #dc2626; }
+
+.signals-section { padding: 10px 16px 4px; }
+.signals-title { font-size: 11px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.signal-card { border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 10px 12px; margin-bottom: 8px; background: var(--color-background-primary); }
+.signal-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.signal-type { font-size: 13px; font-weight: 500; color: var(--color-text-primary); }
+.signal-badge { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 500; }
+.badge-strong { background: #dcfce7; color: #15803d; }
+.badge-weak { background: #fee2e2; color: #b91c1c; }
+.badge-neutral { background: var(--color-background-secondary); color: var(--color-text-secondary); }
+.signal-detail { font-size: 12px; color: var(--color-text-secondary); line-height: 1.5; }
+.signal-highlight { font-weight: 500; color: var(--color-text-primary); }
+
+.stats-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 8px 16px; }
+.stat-card { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 8px 10px; text-align: center; }
+.stat-label { font-size: 10px; color: var(--color-text-secondary); margin-bottom: 2px; }
+.stat-value { font-size: 13px; font-weight: 500; color: var(--color-text-primary); }
+.stat-value.hot { color: #16a34a; }
+.stat-value.cold { color: #dc2626; }
+
+.tick-feed { padding: 0 16px 10px; }
+.tick-title { font-size: 11px; color: var(--color-text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+.tick-row { display: flex; gap: 4px; flex-wrap: wrap; }
+.tick-chip { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; color: var(--color-text-primary); background: var(--color-background-secondary); border: 0.5px solid var(--color-border-tertiary); }
+.tick-chip.newest { background: #1a3c5e; color: #fff; }
+.tick-chip.even { background: #ede9fe; color: #4c1d95; border-color: #c4b5fd; }
+.tick-chip.odd { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+
+.connecting { text-align: center; padding: 30px 16px; color: var(--color-text-secondary); font-size: 14px; }
+.conn-dot { display: inline-block; animation: blink 1s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+.bottom-bar { padding: 8px 16px 12px; display: flex; align-items: center; justify-content: space-between; border-top: 0.5px solid var(--color-border-tertiary); }
+.legend { display: flex; gap: 10px; font-size: 11px; }
+.legend-item { display: flex; align-items: center; gap: 4px; color: var(--color-text-secondary); }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+</style>
+
+<h2 class="sr-only">Deriv digit analyzer with trade type signals</h2>
+
+<div class="header">
+  <div>
+    <div style="font-size:15px;font-weight:500;">Deriv Digit Analyzer</div>
+    <div style="font-size:12px;color:#adc8e0;" id="marketLabel">Volatility 25 Index</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px;">
+    <div class="status-dot" id="statusDot"></div>
+    <span style="font-size:12px;color:#adc8e0;" id="statusTxt">Connecting...</span>
+  </div>
+</div>
+
+<div class="market-bar">
+  <select id="marketSel" style="flex:1;font-size:13px;padding:5px 8px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);background:var(--color-background-primary);color:var(--color-text-primary);">
+    <option value="R_25">Volatility 25 Index</option>
+    <option value="R_10">Volatility 10 Index</option>
+    <option value="R_50">Volatility 50 Index</option>
+    <option value="R_75">Volatility 75 Index</option>
+    <option value="R_100">Volatility 100 Index</option>
+    <option value="1HZ10V">Volatility 10 (1s) Index</option>
+    <option value="1HZ25V">Volatility 25 (1s) Index</option>
+    <option value="1HZ50V">Volatility 50 (1s) Index</option>
+    <option value="1HZ75V">Volatility 75 (1s) Index</option>
+    <option value="1HZ100V">Volatility 100 (1s) Index</option>
+  </select>
+  <span id="spotPrice" style="font-size:12px;color:var(--color-text-secondary);min-width:76px;text-align:right;"></span>
+</div>
+
+<div class="controls">
+  <span style="font-size:12px;color:var(--color-text-secondary);">Sample:</span>
+  <button class="sample-btn active" data-n="20">20</button>
+  <button class="sample-btn" data-n="50">50</button>
+  <button class="sample-btn" data-n="100">100</button>
+</div>
+
+<div id="connectingMsg" class="connecting">
+  <div style="font-size:28px;margin-bottom:8px;"><i class="ti ti-wave-sine" aria-hidden="true"></i></div>
+  Connecting to live feed<span class="conn-dot">.</span><span class="conn-dot" style="animation-delay:0.3s">.</span><span class="conn-dot" style="animation-delay:0.6s">.</span>
+</div>
+
+<div id="mainContent" style="display:none;">
+
+  <div class="digits-grid" id="digitsGrid"></div>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Hottest</div>
+      <div class="stat-value hot" id="mostFreq">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Coldest</div>
+      <div class="stat-value cold" id="leastFreq">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Last digit</div>
+      <div class="stat-value" id="lastDigit" style="font-size:20px;">—</div>
+    </div>
+  </div>
+
+  <div class="signals-section">
+    <div class="signals-title">Trade signals</div>
+
+    <div class="signal-card">
+      <div class="signal-top">
+        <span class="signal-type">Over / Under</span>
+        <span class="signal-badge" id="ouBadge">—</span>
+      </div>
+      <div class="signal-detail" id="ouDetail">Waiting for data...</div>
+    </div>
+
+    <div class="signal-card">
+      <div class="signal-top">
+        <span class="signal-type">Even / Odd</span>
+        <span class="signal-badge" id="eoBadge">—</span>
+      </div>
+      <div class="signal-detail" id="eoDetail">Waiting for data...</div>
+    </div>
+
+    <div class="signal-card">
+      <div class="signal-top">
+        <span class="signal-type">Matches / Differs</span>
+        <span class="signal-badge" id="mdBadge">—</span>
+      </div>
+      <div class="signal-detail" id="mdDetail">Waiting for data...</div>
+    </div>
+
+  </div>
+
+  <div class="tick-feed" style="margin-top:4px;">
+    <div class="tick-title">Recent digits</div>
+    <div class="tick-row" id="tickRow"></div>
+  </div>
+
+  <div class="bottom-bar">
+    <div style="font-size:12px;color:var(--color-text-secondary);" id="tickCount">Ticks: 0</div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#16a34a;"></div>Hot</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#dc2626;"></div>Cold</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let ws = null, ticks = [], sampleSize = 20, currentSymbol = 'R_25', reqId = 1;
+const marketNames = {
+  'R_25':'Volatility 25 Index','R_10':'Volatility 10 Index','R_50':'Volatility 50 Index',
+  'R_75':'Volatility 75 Index','R_100':'Volatility 100 Index',
+  '1HZ10V':'Volatility 10 (1s) Index','1HZ25V':'Volatility 25 (1s) Index',
+  '1HZ50V':'Volatility 50 (1s) Index','1HZ75V':'Volatility 75 (1s) Index',
+  '1HZ100V':'Volatility 100 (1s) Index'
+};
+
+function connect(symbol) {
+  if (ws) { try { ws.close(); } catch(e){} }
+  ticks = [];
+  document.getElementById('connectingMsg').style.display = 'block';
+  document.getElementById('mainContent').style.display = 'none';
+  document.getElementById('statusTxt').textContent = 'Connecting...';
+  document.getElementById('statusDot').style.background = '#f59e0b';
+  document.getElementById('marketLabel').textContent = marketNames[symbol] || symbol;
+  ws = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1089');
+  ws.onopen = () => ws.send(JSON.stringify({ ticks: symbol, subscribe: 1, req_id: reqId++ }));
+  ws.onmessage = (e) => {
+    const d = JSON.parse(e.data);
+    if (d.msg_type === 'ticks' && d.tick) {
+      const q = d.tick.quote.toString();
+      ticks.push(parseInt(q[q.length - 1]));
+      if (ticks.length > 300) ticks.shift();
+      document.getElementById('spotPrice').textContent = parseFloat(d.tick.quote).toFixed(3);
+      document.getElementById('connectingMsg').style.display = 'none';
+      document.getElementById('mainContent').style.display = 'block';
+      document.getElementById('statusTxt').textContent = 'Live';
+      document.getElementById('statusDot').style.background = '#22c55e';
+      render();
+    }
+  };
+  ws.onerror = () => { document.getElementById('statusTxt').textContent = 'Error'; document.getElementById('statusDot').style.background = '#dc2626'; };
+  ws.onclose = () => {
+    if (document.getElementById('statusTxt').textContent === 'Live') {
+      document.getElementById('statusTxt').textContent = 'Reconnecting...';
+      document.getElementById('statusDot').style.background = '#f59e0b';
+      setTimeout(() => connect(currentSymbol), 2500);
+    }
+  };
+}
+
+function setBadge(id, text, type) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'signal-badge ' + (type === 'strong' ? 'badge-strong' : type === 'weak' ? 'badge-weak' : 'badge-neutral');
+}
+
+function render() {
+  const sample = ticks.slice(-sampleSize);
+  const counts = Array(10).fill(0);
+  sample.forEach(d => counts[d]++);
+  const total = sample.length || 1;
+  const pcts = counts.map(c => c / total * 100);
+  const maxPct = Math.max(...pcts);
+  const minPct = Math.min(...pcts);
+  const hotDigit = pcts.indexOf(maxPct);
+  const coldDigit = pcts.indexOf(minPct);
+  const lastDig = ticks[ticks.length - 1];
+
+  // digits grid
+  const grid = document.getElementById('digitsGrid');
+  grid.innerHTML = '';
+  for (let i = 0; i < 10; i++) {
+    const p = pcts[i];
+    const isHot = i === hotDigit, isCold = i === coldDigit, isLast = i === lastDig;
+    let cc = isHot ? 'hot' : isCold ? 'cold' : '';
+    if (isLast) cc += ' active-digit';
+    const pc = isHot ? '#16a34a' : isCold ? '#dc2626' : 'var(--color-text-secondary)';
+    const fc = isHot ? 'hot' : isCold ? 'cold' : '';
+    grid.innerHTML += `<div class="digit-cell">
+      <div class="digit-circle ${cc}">
+        <span class="digit-num">${i}</span>
+        <span class="digit-pct" style="color:${pc}">${p.toFixed(1)}%</span>
+      </div>
+      <div class="digit-bar"><div class="digit-bar-fill ${fc}" style="width:${Math.min(p/15*100,100)}%"></div></div>
+    </div>`;
+  }
+
+  document.getElementById('mostFreq').textContent = `${hotDigit} (${maxPct.toFixed(1)}%)`;
+  document.getElementById('leastFreq').textContent = `${coldDigit} (${minPct.toFixed(1)}%)`;
+  document.getElementById('lastDigit').textContent = lastDig !== undefined ? lastDig : '—';
+  document.getElementById('tickCount').textContent = `Ticks: ${ticks.length}`;
+
+  // --- OVER/UNDER SIGNAL ---
+  const highCount = [5,6,7,8,9].reduce((s,i) => s+counts[i], 0);
+  const lowCount  = [0,1,2,3,4].reduce((s,i) => s+counts[i], 0);
+  const highPct = highCount/total*100;
+  const lowPct  = lowCount/total*100;
+  if (highPct >= 60) {
+    setBadge('ouBadge', 'Over signal', 'strong');
+    document.getElementById('ouDetail').innerHTML = `High digits (5–9) appear <span class="signal-highlight">${highPct.toFixed(0)}%</span> of the time. Consider <span class="signal-highlight">Over 4</span> trade.`;
+  } else if (lowPct >= 60) {
+    setBadge('ouBadge', 'Under signal', 'strong');
+    document.getElementById('ouDetail').innerHTML = `Low digits (0–4) appear <span class="signal-highlight">${lowPct.toFixed(0)}%</span> of the time. Consider <span class="signal-highlight">Under 5</span> trade.`;
+  } else if (coldDigit <= 4 && minPct < 7) {
+    setBadge('ouBadge', 'Over signal', 'strong');
+    document.getElementById('ouDetail').innerHTML = `Digit <span class="signal-highlight">${coldDigit}</span> is very cold at <span class="signal-highlight">${minPct.toFixed(1)}%</span>. High digits dominating — consider <span class="signal-highlight">Over 4</span>.`;
+  } else if (coldDigit >= 5 && minPct < 7) {
+    setBadge('ouBadge', 'Under signal', 'strong');
+    document.getElementById('ouDetail').innerHTML = `Digit <span class="signal-highlight">${coldDigit}</span> is very cold at <span class="signal-highlight">${minPct.toFixed(1)}%</span>. Low digits dominating — consider <span class="signal-highlight">Under 5</span>.`;
+  } else {
+    setBadge('ouBadge', 'No clear signal', 'neutral');
+    document.getElementById('ouDetail').innerHTML = `Distribution is balanced. Wait for a stronger pattern before trading.`;
+  }
+
+  // --- EVEN/ODD SIGNAL ---
+  const evenCount = [0,2,4,6,8].reduce((s,i) => s+counts[i], 0);
+  const oddCount  = [1,3,5,7,9].reduce((s,i) => s+counts[i], 0);
+  const evenPct = evenCount/total*100;
+  const oddPct  = oddCount/total*100;
+  const eoDiff = Math.abs(evenPct - oddPct);
+  if (eoDiff >= 15) {
+    const side = evenPct > oddPct ? 'Even' : 'Odd';
+    const sidePct = evenPct > oddPct ? evenPct : oddPct;
+    setBadge('eoBadge', side + ' signal', 'strong');
+    document.getElementById('eoDetail').innerHTML = `<span class="signal-highlight">${side}</span> digits appearing <span class="signal-highlight">${sidePct.toFixed(0)}%</span> vs ${(100-sidePct).toFixed(0)}%. Consider <span class="signal-highlight">${side}</span> trade.`;
+  } else {
+    setBadge('eoBadge', 'Balanced', 'neutral');
+    document.getElementById('eoDetail').innerHTML = `Even: <span class="signal-highlight">${evenPct.toFixed(0)}%</span> — Odd: <span class="signal-highlight">${oddPct.toFixed(0)}%</span>. Too close to call right now.`;
+  }
+
+  // --- MATCHES/DIFFERS SIGNAL ---
+  if (maxPct >= 18) {
+    setBadge('mdBadge', 'Matches signal', 'strong');
+    document.getElementById('mdDetail').innerHTML = `Digit <span class="signal-highlight">${hotDigit}</span> is very hot at <span class="signal-highlight">${maxPct.toFixed(1)}%</span>. Consider <span class="signal-highlight">Matches ${hotDigit}</span> trade.`;
+  } else if (minPct <= 4) {
+    setBadge('mdBadge', 'Differs signal', 'strong');
+    document.getElementById('mdDetail').innerHTML = `Digit <span class="signal-highlight">${coldDigit}</span> is very cold at <span class="signal-highlight">${minPct.toFixed(1)}%</span>. Consider <span class="signal-highlight">Differs ${coldDigit}</span> — it rarely appears.`;
+  } else {
+    setBadge('mdBadge', 'No clear signal', 'neutral');
+    document.getElementById('mdDetail').innerHTML = `No digit is dominant enough. Hottest is <span class="signal-highlight">${hotDigit} (${maxPct.toFixed(1)}%)</span>. Wait for stronger pattern.`;
+  }
+
+  // tick chips
+  const recent = ticks.slice(-25);
+  const tickRow = document.getElementById('tickRow');
+  tickRow.innerHTML = '';
+  recent.forEach((d, idx) => {
+    const isNewest = idx === recent.length - 1;
+    const cls = isNewest ? 'newest' : d % 2 === 0 ? 'even' : 'odd';
+    tickRow.innerHTML += `<div class="tick-chip ${cls}">${d}</div>`;
+  });
+}
+
+document.getElementById('marketSel').addEventListener('change', function() {
+  currentSymbol = this.value;
+  connect(currentSymbol);
+});
+document.querySelectorAll('.sample-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.sample-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    sampleSize = parseInt(this.dataset.n);
+    render();
+  });
+});
+
+connect(currentSymbol);
+</script>
